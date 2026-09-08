@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PCC Droop Bench — DER inverter grid-stabilization simulator</title>
+    <meta
+      name="description"
+      content="Interactive frequency-watt and volt-var droop simulator for DER inverters at the point of common coupling."
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 5 L9.5 12 H14.5 L21 19' fill='none' stroke='%232dd4a7' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link
+      href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <svg class="mark" viewBox="0 0 24 24" aria-label="PCC Droop Bench logo" role="img">
+            <path
+              d="M3 5 L9.5 12 H14.5 L21 19"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <div class="brand-text">
+            <h1>PCC Droop Bench</h1>
+            <p>DER inverter grid-support simulator · IEEE 1547 droop</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="clock" id="clock">
+            <span class="clock-label">sim time</span>
+            <span class="clock-value" id="simTime">0.00 s</span>
+          </div>
+          <div class="seg" role="group" aria-label="Simulation control">
+            <button id="btnRun" class="seg-btn" aria-pressed="true">Pause</button>
+            <button id="btnEvent" class="seg-btn">Fire event</button>
+            <button id="btnReset" class="seg-btn">Reset</button>
+          </div>
+          <button id="themeToggle" class="icon-btn" aria-label="Toggle color theme">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+              <path
+                id="themeIcon"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8Z"
+              />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <aside class="sidebar" id="sidebar">
+        <div class="side-scroll" id="controls"></div>
+      </aside>
+
+      <main class="main" id="main">
+        <nav class="tabs" role="tablist">
+          <button class="tab is-active" data-tab="live" role="tab" aria-selected="true">
+            Live bench
+          </button>
+          <button class="tab" data-tab="compare" role="tab" aria-selected="false">
+            Compare configurations <span class="tab-count" id="tabCount">0</span>
+          </button>
+          <button class="tab" data-tab="notes" role="tab" aria-selected="false">Model notes</button>
+        </nav>
+
+        <!-- ================= LIVE ================= -->
+        <section class="panel" data-panel="live">
+          <div class="sld card">
+            <div class="card-head">
+              <h2>Single-line view</h2>
+              <span class="chip" id="sldMode">dynamic grid</span>
+            </div>
+            <svg class="sld-svg" viewBox="0 0 900 132" preserveAspectRatio="xMidYMid meet">
+              <!-- grid source -->
+              <circle
+                cx="66"
+                cy="66"
+                r="26"
+                class="sld-node"
+              />
+              <path d="M52 66q7-11 14 0t14 0" class="sld-sine" />
+              <text x="66" y="112" class="sld-label" text-anchor="middle">GRID SOURCE</text>
+              <text x="66" y="30" class="sld-val" text-anchor="middle" id="sldVs">1.000 pu</text>
+
+              <!-- line -->
+              <line x1="92" y1="66" x2="330" y2="66" class="sld-wire" />
+              <rect x="196" y="50" width="74" height="32" rx="4" class="sld-box" />
+              <text x="233" y="70" class="sld-box-text" text-anchor="middle" id="sldZ">
+                R+jX
+              </text>
+              <text x="233" y="112" class="sld-label" text-anchor="middle">LINE IMPEDANCE</text>
+              <circle class="flow-dot" id="flowDot1" r="3.6" cx="150" cy="66" />
+              <circle class="flow-dot" id="flowDot2" r="3.6" cx="150" cy="66" />
+
+              <!-- PCC busbar -->
+              <line x1="330" y1="24" x2="330" y2="108" class="sld-bus" />
+              <text x="330" y="16" class="sld-label" text-anchor="middle">PCC</text>
+              <text x="392" y="40" class="sld-val" text-anchor="middle" id="sldVpcc">1.000 pu</text>
+              <text x="392" y="56" class="sld-sub" text-anchor="middle" id="sldF">60.000 Hz</text>
+
+              <!-- feeder load tap -->
+              <line x1="330" y1="96" x2="470" y2="96" class="sld-wire" />
+              <path d="M470 88h22l-11 18Z" class="sld-load" />
+              <text x="497" y="101" class="sld-label" text-anchor="start">LOCAL LOAD</text>
+
+              <!-- inverter -->
+              <line x1="330" y1="66" x2="640" y2="66" class="sld-wire" />
+              <rect x="640" y="34" width="70" height="64" rx="6" class="sld-box" />
+              <path d="M650 88 L700 44" class="sld-wire thin" />
+              <path d="M652 56q6-9 12 0t12 0" class="sld-sine small" />
+              <text x="675" y="112" class="sld-label" text-anchor="middle">INVERTER</text>
+              <line x1="710" y1="66" x2="756" y2="66" class="sld-wire" />
+              <rect x="756" y="46" width="46" height="40" rx="4" class="sld-box dc" />
+              <text x="779" y="70" class="sld-box-text" text-anchor="middle">DC</text>
+
+              <text x="828" y="52" class="sld-val p" text-anchor="start" id="sldP">P +0.55</text>
+              <text x="828" y="76" class="sld-val q" text-anchor="start" id="sldQ">Q +0.00</text>
+            </svg>
+          </div>
+
+          <div class="kpis" id="kpis"></div>
+
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-head">
+                <h2>P–f characteristic</h2>
+                <span class="chip" id="chipDroopP">5.0 % droop</span>
+              </div>
+              <div class="canvas-wrap"><canvas id="cPf"></canvas></div>
+              <p class="card-foot" id="footPf"></p>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <h2>Q–V characteristic</h2>
+                <span class="chip" id="chipDroopQ">volt-var</span>
+              </div>
+              <div class="canvas-wrap"><canvas id="cQv"></canvas></div>
+              <p class="card-foot" id="footQv"></p>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-head">
+                <h2>Frequency at PCC</h2>
+                <span class="chip" id="chipF">—</span>
+              </div>
+              <div class="canvas-wrap tall"><canvas id="cScopeF"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <h2>Voltage at PCC</h2>
+                <span class="chip" id="chipV">—</span>
+              </div>
+              <div class="canvas-wrap tall"><canvas id="cScopeV"></canvas></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h2>Inverter injection / absorption</h2>
+              <span class="chip" id="chipS">—</span>
+            </div>
+            <div class="canvas-wrap tall"><canvas id="cScopePQ"></canvas></div>
+            <p class="card-foot">
+              Positive = injection into the grid. Negative P = charging (storage-capable mode),
+              negative Q = reactive absorption.
+            </p>
+          </div>
+        </section>
+
+        <!-- ================= COMPARE ================= -->
+        <section class="panel is-hidden" data-panel="compare">
+          <div class="card">
+            <div class="card-head">
+              <h2>Saved configurations</h2>
+              <div class="head-actions">
+                <label class="mini-field">
+                  <span>Event</span>
+                  <select id="cmpEvent"></select>
+                </label>
+                <button id="btnCompare" class="btn primary">Run comparison</button>
+              </div>
+            </div>
+            <div id="savedList" class="saved-list"></div>
+            <p class="card-foot">
+              Save the current slider set from the sidebar, change the droop settings, save again,
+              then run all selected configurations through the same disturbance.
+            </p>
+          </div>
+
+          <div id="cmpResults" class="cmp-results is-hidden">
+            <div class="card">
+              <div class="card-head">
+                <h2>Power-quality scorecard</h2>
+                <span class="chip" id="cmpEventChip">—</span>
+              </div>
+              <div class="table-wrap"><table id="cmpTable"></table></div>
+              <p class="card-foot">
+                Best value in each column is highlighted. Δ|V| integral is the accumulated voltage
+                error at the PCC over the run — the single best proxy for delivered power quality.
+                Settling times are the last instant each signal is still outside a ±5 % band around
+                its own final value, so a legitimate droop offset is not counted as unsettled.
+              </p>
+            </div>
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-head"><h2>Frequency</h2></div>
+                <div class="canvas-wrap tall"><canvas id="cCmpF"></canvas></div>
+              </div>
+              <div class="card">
+                <div class="card-head"><h2>PCC voltage</h2></div>
+                <div class="canvas-wrap tall"><canvas id="cCmpV"></canvas></div>
+              </div>
+              <div class="card">
+                <div class="card-head"><h2>Active power</h2></div>
+                <div class="canvas-wrap tall"><canvas id="cCmpP"></canvas></div>
+              </div>
+              <div class="card">
+                <div class="card-head"><h2>Reactive power</h2></div>
+                <div class="canvas-wrap tall"><canvas id="cCmpQ"></canvas></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= NOTES ================= -->
+        <section class="panel is-hidden" data-panel="notes">
+          <div class="card prose">
+            <h2>What is being solved</h2>
+            <p>
+              Everything is per-unit on the inverter apparent-power rating. The grid is a Thevenin
+              source behind the line impedance you set; the PCC voltage is the source magnitude plus
+              the voltage rise the inverter itself creates.
+            </p>
+            <pre>
+V_pcc  =  Vs + R·P + X·Q                      network coupling
+P_ref  =  P0 − (kp/100)·dz(f − 60, db_f)      frequency-watt
+Q_ref  =  −(kq/100)·dz(V − Vref, db_v)/0.01   volt-var
+Tp·dP  =  P_ref − P     Tq·dQ = Q_ref − Q     open-loop response time
+2H·dω  =  Pg + r·ΔP − ΔP_load − D·ω           swing equation
+Tg·dPg =  −Pg − Kg·ω                          rest-of-fleet governor
+dz(x,db) = x−db (x>db), x+db (x<−db), else 0  deadband</pre>
+            <h2>Why the loop can ring</h2>
+            <p>
+              Volt-var control closes a loop through the network: the inverter changes Q, which
+              changes the PCC voltage it is measuring. Loop gain is
+              <code>X · dQ/dV</code>. Raise kq or the line reactance far enough and the response
+              becomes underdamped, then oscillatory — the classic weak-grid volt-var hunting seen on
+              high-penetration feeders. Slowing the response time (larger Tq) damps it; the deadband
+              stops the small-signal hunting around the reference.
+            </p>
+            <h2>Reference settings</h2>
+            <p>
+              IEEE 1547-2018 defaults: frequency deadband 0.036 Hz, 5 % droop (≈33.3 % of rating per
+              Hz), open-loop response time 0.2–10 s, and Category B reactive capability of 44 % of
+              rating. Rule 21 volt-var uses a piecewise curve rather than a single slope; the single
+              slope with deadband here is its linearised equivalent.
+            </p>
+            <h2>Simplifications worth knowing</h2>
+            <ul>
+              <li>Linearised voltage rise — no full load-flow, no angle dynamics.</li>
+              <li>No current-controller or PLL dynamics; the response-time lag stands in for them.</li>
+              <li>Frequency is system-wide (single bus) — no inter-area modes.</li>
+              <li>No ride-through trip logic, no harmonics, no unbalance.</li>
+            </ul>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
