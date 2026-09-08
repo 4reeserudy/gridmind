@@ -1,0 +1,62 @@
+[[fund-power]]
+[[sim]]
+[[ieee-1547]]
+
+%% Begin Landmark %%
+- **[[sim-pcc-droop]]** — `sim/pcc-droop/`
+	- [[droop-frequency-watt]]
+	- [[droop-volt-var]]
+	- [[deadband]]
+	- [[line-impedance]]
+	- [[apparent-power-priority]]
+	- [[power-quality]]
+
+%% End Landmark %%
+
+the point of common coupling is where the plant stops being ours and starts being everyone's.
+
+an inverter has no inertia. what it has is a rule: measure, and answer. droop is that rule written
+down — a slope, a deadband, a response time, a limit.
+
+~~~0x43
+#transient
+~~~
+
+what the bench solves.
+
+```
+V_pcc  =  Vs + R·P + X·Q                      network coupling
+P_ref  =  P0 − (kp/100)·dz(f − 60, db_f)      frequency-watt
+Q_ref  =  −(kq/100)·dz(V − Vref, db_v)/0.01   volt-var
+Tp·dP  =  P_ref − P     Tq·dQ = Q_ref − Q     open-loop response time
+2H·dω  =  Pg + r·ΔP − ΔP_load − D·ω           swing equation
+Tg·dPg =  −Pg − Kg·ω                          rest-of-fleet governor
+dz(x,db) = x−db (x>db), x+db (x<−db), else 0  deadband
+```
+
+per unit on the inverter rating. the grid is a thevenin source behind R + jX. the voltage at the
+PCC is the source plus the rise the plant makes itself — so volt-var closes a loop through the
+network it is measuring. loop gain is `X · dQ/dV`. raise kq on a weak line and the answer starts
+to argue with the question. hunting.
+
+three things to watch, in order.
+
+- **nadir** — how far frequency falls before the fleet catches it. droop gain and response time.
+- **excursion** — how far voltage strays at the PCC. kq, deadband, and the reactance you are behind.
+- **ripple** — whether the response settles or oscillates. loop gain against response time.
+
+ieee 1547-2018 defaults live in the bench as a preset: deadband 0.036 Hz, 5 % droop (33.3 % of
+rating per hertz), open-loop response 0.2–10 s, category B reactive capability 0.44 pu. rule 21
+uses a piecewise volt-var curve; the single slope here is its linearised cousin.
+
+~~~0x32
+#infrastructure
+~~~
+
+settings are not opinions. save two, run the same disturbance through both, read the scorecard.
+
+the deadband is the humility term. without it the plant answers noise.
+
+folder files. great solutions.
+
+gridmind.
